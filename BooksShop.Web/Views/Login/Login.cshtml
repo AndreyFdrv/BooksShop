@@ -1,0 +1,24 @@
+﻿<!DOCTYPE html>
+
+<html>
+<head>
+    <meta name="viewport" content="width=device-width" />
+    <title>Сэйлы!</title>
+</head>
+<body>
+    <input type="button" value="Получить промокод" 
+           onclick="location.href='@Url.Action("CreatePromoCode", "Login")'" />
+    @using (Html.BeginForm())
+    {
+        <div class="form-group">
+            <label>Промокод</label>
+            <input type="text" size="50" name="promoCodeStr" />
+        </div>
+        <button class="btn btn-primary" type="submit" formmethod="post">Войти</button>
+    }
+    @if (ViewBag.ErrorMessage != "")
+    {
+        <font color="red">@ViewBag.ErrorMessage</font>
+    }
+</body>
+</html>

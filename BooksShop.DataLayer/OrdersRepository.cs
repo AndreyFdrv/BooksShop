@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.Data.SqlClient;
 namespace BooksShop.DataLayer
 {
-    class OrdersRepository
+    public class OrdersRepository
     {
         private readonly string ConnectionString;
         public OrdersRepository(string connectionString)
@@ -19,9 +19,9 @@ namespace BooksShop.DataLayer
                 using (var command = connection.CreateCommand())
                 {
                     command.CommandText = "insert into Orders (PromoCode, StatusID) values(@PromoCode, @StatusID)";
-                    var promoCode = new Guid();
+                    var promoCode = Guid.NewGuid();
                     command.Parameters.AddWithValue("@PromoCode", promoCode);
-                    command.Parameters.AddWithValue("@StatusID", Order.StatusEnum.Forming);
+                    command.Parameters.AddWithValue("@StatusID", (int)Order.StatusEnum.Forming);
                     command.ExecuteNonQuery();
                     return promoCode;
                 }
@@ -34,11 +34,9 @@ namespace BooksShop.DataLayer
                 connection.Open();
                 using (var command = connection.CreateCommand())
                 {
-                    command.CommandText = "select * from Orders where PromoCode=@PromoCode";
+                    command.CommandText = "select count(*) from Orders where PromoCode=@PromoCode";
                     command.Parameters.AddWithValue("@PromoCode", promoCode);
-                    if(command.ExecuteNonQuery()==0)
-                        return false;
-                    return true;
+                    return (int)command.ExecuteScalar()>0;
                 }
             }
         }
