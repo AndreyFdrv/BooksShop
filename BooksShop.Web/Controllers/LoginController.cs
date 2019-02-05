@@ -16,6 +16,7 @@ namespace BooksShop.Web.Controllers
             ConnectionString = ConfigurationManager.ConnectionStrings["ConnectionString"].ToString();
             OrdersRepository = new OrdersRepository(ConnectionString);
         }
+        [HttpGet]
         public ActionResult Login()
         {
             ViewBag.ErrorMessage = "";

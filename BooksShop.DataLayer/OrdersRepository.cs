@@ -42,7 +42,7 @@ namespace BooksShop.DataLayer
         }
         public Order.StatusEnum GetStatus(Guid promoCode)
         {
-            if (IsOrderExist(promoCode))
+            if (!IsOrderExist(promoCode))
                 throw new ArgumentException($"Заказ {promoCode} не существует");
             using (var connection = new SqlConnection(ConnectionString))
             {
@@ -157,7 +157,7 @@ namespace BooksShop.DataLayer
         }
         public void AddBooks(Guid promoCode, string ISBNCode, int count=1)
         {
-            if (IsOrderExist(promoCode))
+            if (!IsOrderExist(promoCode))
                 throw new ArgumentException($"Заказ {promoCode} не существует");
             if (GetStatus(promoCode) != Order.StatusEnum.Forming)
                 throw new ArgumentException($"Заказ {promoCode} невозможно изменить, так как он уже сформирован");
@@ -199,7 +199,7 @@ namespace BooksShop.DataLayer
         }
         public void DeleteBooks(Guid promoCode, string ISBNCode, int count = 1)
         {
-            if (IsOrderExist(promoCode))
+            if (!IsOrderExist(promoCode))
                 throw new ArgumentException($"Заказ {promoCode} не существует");
             if (GetStatus(promoCode) != Order.StatusEnum.Forming)
                 throw new ArgumentException($"Заказ {promoCode} невозможно изменить, так как он уже сформирован");

@@ -7,22 +7,62 @@
 </head>
 <body>
     <div>
-        <h3>Распродажа книг</h3>
-        <table>
+        <label>Ваш промокод: @ViewBag.PromoCode</label>
+        <input type="button" value="Выйти"
+               onclick="location.href='@Url.Action("Login", "Login")'" style="float:right" />
+    </div>
+    <div style="float:left; width: 50%">
+        <h3>Список книг</h3>
+        <table border="1">
             <tr>
-                <td><p>Название книги</p></td>
+                <td><p>Название</p></td>
                 <td><p>Автор</p></td>
+                <td><p>Год издания</p></td>
+                <td><p>ISBN код</p></td>
                 <td><p>Цена</p></td>
+                <td><p>Количество</p></td>
                 <td></td>
             </tr>
             @foreach (var b in ViewBag.Books)
             {
-                <tr>
-                    <td><p>@b.Name</p></td>
-                    <td><p>@b.Author</p></td>
-                    <td><p>@b.Price</p></td>
-                    <td><p><a href="/Home/Buy/@b.ISBNCode">Купить</a></p></td>
-                </tr>
+            <tr>
+                <td><p>@b.Name</p></td>
+                <td><p>@b.Author</p></td>
+                <td><p>@b.PublishingYear</p></td>
+                <td><p>@b.ISBNCode</p></td>
+                <td><p>@b.Price</p></td>
+                <td><p>@b.Count</p></td>
+                <td>
+                    <input type="button" value="Добавить в корзину"
+                        onclick="location.href='@Url.Action("AddToOrder", "Home", 
+                                                    new { ISBNCode = b.ISBNCode })'" />
+                </td >
+            </tr >
+            }
+</table>
+    </div>
+    <div style="float:right; width: 50%">
+        <h3>Корзина</h3>
+        <table border="1">
+            <tr>
+                <td><p>Название</p></td>
+                <td><p>Автор</p></td>
+                <td><p>Год издания</p></td>
+                <td><p>ISBN код</p></td>
+                <td><p>Цена</p></td>
+                <td><p>Количество</p></td>
+                <td></td>
+            </tr>
+            @foreach (var b in ViewBag.OrderedBooks)
+            {
+            <tr>
+                <td><p>@b.Name</p></td>
+                <td><p>@b.Author</p></td>
+                <td><p>@b.PublishingYear</p></td>
+                <td><p>@b.ISBNCode</p></td>
+                <td><p>@b.Price</p></td>
+                <td><p>@b.Count</p></td>
+            </tr>
             }
         </table>
     </div>
