@@ -19,27 +19,29 @@
                 <td><p>Автор</p></td>
                 <td><p>Год издания</p></td>
                 <td><p>ISBN код</p></td>
-                <td><p>Цена</p></td>
+                <td><p>Цена, р.</p></td>
                 <td><p>Количество</p></td>
                 <td></td>
             </tr>
             @foreach (var b in ViewBag.Books)
             {
-            <tr>
-                <td><p>@b.Name</p></td>
-                <td><p>@b.Author</p></td>
-                <td><p>@b.PublishingYear</p></td>
-                <td><p>@b.ISBNCode</p></td>
-                <td><p>@b.Price</p></td>
-                <td><p>@b.Count</p></td>
-                <td>
-                    <input type="button" value="Добавить в корзину"
-                        onclick="location.href='@Url.Action("AddToOrder", "Home", 
-                                                    new { ISBNCode = b.ISBNCode })'" />
-                </td >
-            </tr >
+                <tr>
+                    <td><p>@b.Name</p></td>
+                    <td><p>@b.Author</p></td>
+                    <td><p>@b.PublishingYear</p></td>
+                    <td><p>@b.ISBNCode</p></td>
+                    <td><p>@b.Price</p></td>
+                    <td><p>@b.Count</p></td>
+                    <td>
+                        @using (Html.BeginForm("AddToOrder", "Home"))
+                        {
+                            <input type="hidden" name="ISBNCode" value=@b.ISBNCode />
+                            <button class="btn btn-primary" type="submit" formmethod="post">Добавить в корзину</button>
+                        }
+                    </td>
+                </tr>
             }
-</table>
+        </table>
     </div>
     <div style="float:right; width: 50%">
         <h3>Корзина</h3>
@@ -49,22 +51,42 @@
                 <td><p>Автор</p></td>
                 <td><p>Год издания</p></td>
                 <td><p>ISBN код</p></td>
-                <td><p>Цена</p></td>
+                <td><p>Цена, р.</p></td>
                 <td><p>Количество</p></td>
                 <td></td>
             </tr>
             @foreach (var b in ViewBag.OrderedBooks)
             {
-            <tr>
-                <td><p>@b.Name</p></td>
-                <td><p>@b.Author</p></td>
-                <td><p>@b.PublishingYear</p></td>
-                <td><p>@b.ISBNCode</p></td>
-                <td><p>@b.Price</p></td>
-                <td><p>@b.Count</p></td>
-            </tr>
+                <tr>
+                    <td><p>@b.Name</p></td>
+                    <td><p>@b.Author</p></td>
+                    <td><p>@b.PublishingYear</p></td>
+                    <td><p>@b.ISBNCode</p></td>
+                    <td><p>@b.Price</p></td>
+                    <td><p>@b.Count</p></td>
+                    <td>
+                        @using (Html.BeginForm("DeleteFromOrder", "Home"))
+                        {
+                            <input type="hidden" name="ISBNCode" value=@b.ISBNCode />
+                            <button class="btn btn-primary" type="submit" formmethod="post">Удалить из корзины</button>
+                        }
+                    </td>
+                </tr>
             }
         </table>
+        Стоимость заказа: @ViewBag.Cost
+        @using (Html.BeginForm("MakeOrder", "Home"))
+        {
+            <button class="btn btn-primary" type="submit" formmethod="post">Оформить заказ</button>
+        }
+        @if (ViewBag.ErrorMessage != "")
+        {
+            <font color="red">@ViewBag.ErrorMessage</font>
+        }
+        @if (ViewBag.InfoMessage != "")
+        {
+            @ViewBag.InfoMessage
+        }
     </div>
 </body>
 </html>

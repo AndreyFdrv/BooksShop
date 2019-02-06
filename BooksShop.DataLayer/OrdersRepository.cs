@@ -40,6 +40,23 @@ namespace BooksShop.DataLayer
                 }
             }
         }
+        public int Cost(Guid promoCode)
+        {
+            if (!IsOrderExist(promoCode))
+                throw new ArgumentException($"Заказ {promoCode} не существует");
+            using (var connection = new SqlConnection(ConnectionString))
+            {
+                connection.Open();
+                using (var command = connection.CreateCommand())
+                {
+                    command.CommandText = "select sum(OrderToBook.Count*Books.Price) " +
+                        "from OrderToBook inner join Books on OrderToBook.ISBN=Books.ISBN where PromoCode=@PromoCode";
+                    command.Parameters.AddWithValue("@PromoCode", promoCode);
+                    var result = command.ExecuteScalar();
+                    return result == DBNull.Value ? 0 : (int)result;
+                }
+            };
+        }
         public Order.StatusEnum GetStatus(Guid promoCode)
         {
             if (!IsOrderExist(promoCode))
@@ -55,9 +72,9 @@ namespace BooksShop.DataLayer
                 }
             }
         }
-        public void SetStatus(Guid promoCode, Order.StatusEnum status)
+        private void SetStatus(Guid promoCode, Order.StatusEnum status)
         {
-            if (IsOrderExist(promoCode))
+            if (!IsOrderExist(promoCode))
                 throw new ArgumentException($"Заказ {promoCode} не существует");
             using (var connection = new SqlConnection(ConnectionString))
             {
@@ -71,6 +88,24 @@ namespace BooksShop.DataLayer
                 }
             }
         }
+        public void MakeOrder(Guid promoCode)
+        {
+            if (GetStatus(promoCode) != Order.StatusEnum.Forming)
+                throw new ArgumentException($"Заказ {promoCode} уже был оформлен");
+            if (Cost(promoCode)<Order.MinCost)
+                throw new ArgumentException($"Минимальная стоимость заказа: {Order.MinCost} рублей");
+            SetStatus(promoCode, Order.StatusEnum.Ordered);
+        }
+        public void CompleteOrder(Guid promoCode)
+        {
+            if (GetStatus(promoCode) == Order.StatusEnum.Forming)
+                throw new ArgumentException($"Заказ {promoCode} не может быть выполнен, так как не был оформлен");
+            else if (GetStatus(promoCode) == Order.StatusEnum.Complete)
+                throw new ArgumentException($"Заказ {promoCode} уже был выполнен");
+            else if (GetStatus(promoCode) != Order.StatusEnum.Ordered)
+                throw new ArgumentException($"Заказ {promoCode} обладает неизвестным статусом");
+            SetStatus(promoCode, Order.StatusEnum.Complete);
+        }
         public IEnumerable<Book> GetBooks(Guid promoCode)
         {
             using (var connection = new SqlConnection(ConnectionString))
@@ -81,7 +116,7 @@ namespace BooksShop.DataLayer
                     command.CommandText = "select Books.ISBN, Books.Name, Books.Author, Books.PublishingYear, "+
                         "Books.Price, OrderToBook.Count "+
                         "from Books inner join OrderToBook on Books.ISBN=OrderToBook.ISBN "+
-                        "where PromoCode=@PromoCode";
+                        "where PromoCode=@PromoCode and OrderToBook.Count>0";
                     command.Parameters.AddWithValue("@PromoCode", promoCode);
                     using (var reader = command.ExecuteReader())
                     {
@@ -108,8 +143,10 @@ namespace BooksShop.DataLayer
                 connection.Open();
                 using (var command = connection.CreateCommand())
                 {
-                    command.CommandText = "select count(*) FROM Books where ISBN=@ISBN";
+                    command.CommandText = "select Count from Books where ISBN=@ISBN";
                     command.Parameters.AddWithValue("@ISBN", ISBNCode);
+                    if (command.ExecuteScalar() == null)
+                        throw new ArgumentException($"Не найдено книги с ISBN кодом {ISBNCode}");
                     return (int)command.ExecuteScalar();
                 }
             }
@@ -121,10 +158,11 @@ namespace BooksShop.DataLayer
                 connection.Open();
                 using (var command = connection.CreateCommand())
                 {
-                    command.CommandText = "select count(*) FROM OrderToBook where PromoCode=@PromoCode and ISBN=@ISBN";
+                    command.CommandText = "select Count from OrderToBook where PromoCode=@PromoCode and ISBN=@ISBN";
                     command.Parameters.AddWithValue("@PromoCode", promoCode);
                     command.Parameters.AddWithValue("@ISBN", ISBNCode);
-                    return (int)command.ExecuteScalar();
+                    var result = command.ExecuteScalar();
+                    return result == null ? 0 : (int)result;
                 }
             }
         }
@@ -160,7 +198,7 @@ namespace BooksShop.DataLayer
             if (!IsOrderExist(promoCode))
                 throw new ArgumentException($"Заказ {promoCode} не существует");
             if (GetStatus(promoCode) != Order.StatusEnum.Forming)
-                throw new ArgumentException($"Заказ {promoCode} невозможно изменить, так как он уже сформирован");
+                throw new ArgumentException($"Заказ {promoCode} невозможно изменить, так как он уже был оформлен");
             using (var connection = new SqlConnection(ConnectionString))
             {
                 connection.Open();
@@ -169,6 +207,9 @@ namespace BooksShop.DataLayer
                     int shopBookCount = GetShopBookCount(ISBNCode);
                     if (shopBookCount < count)
                         throw new ArgumentException($"Недостаточно книг с ISBN кодом {ISBNCode}");
+                    if(GetOrderBookCount(promoCode, ISBNCode)>=1)
+                        throw new ArgumentException("В корзину можно положить только один экземпдяр " +
+                            "одной и той же книги");
                     using (var command = connection.CreateCommand())
                     {
                         command.Transaction = transaction;
@@ -202,7 +243,7 @@ namespace BooksShop.DataLayer
             if (!IsOrderExist(promoCode))
                 throw new ArgumentException($"Заказ {promoCode} не существует");
             if (GetStatus(promoCode) != Order.StatusEnum.Forming)
-                throw new ArgumentException($"Заказ {promoCode} невозможно изменить, так как он уже сформирован");
+                throw new ArgumentException($"Заказ {promoCode} невозможно изменить, так как он уже был оформлен");
             using (var connection = new SqlConnection(ConnectionString))
             {
                 connection.Open();
@@ -211,18 +252,33 @@ namespace BooksShop.DataLayer
                     int orderBookCount = GetOrderBookCount(promoCode, ISBNCode);
                     if (orderBookCount < count)
                         throw new ArgumentException($"Недостаточно книг с ISBN кодом {ISBNCode} в заказе {promoCode}");
-                    using (var command = connection.CreateCommand())
+                    else if (orderBookCount == count)
                     {
-                        command.Transaction = transaction;
-                        command.CommandText = "update OrderToBook set Count = Count - @Count "+
-                            "where PromoCode=@PromoCode and ISBN=@ISBN";
-                        command.Parameters.AddWithValue("@Count", count);
-                        command.Parameters.AddWithValue("@PromoCode", ISBNCode);
-                        command.Parameters.AddWithValue("@ISBN", ISBNCode);
-                        if (command.ExecuteNonQuery() == 0)
-                            throw new ArgumentException($"Не найдено книги с ISBN кодом {ISBNCode} в заказе {promoCode}");
+                        using (var command = connection.CreateCommand())
+                        {
+                            command.Transaction = transaction;
+                            command.CommandText = "delete from OrderToBook where PromoCode=@PromoCode and ISBN=@ISBN";
+                            command.Parameters.AddWithValue("@PromoCode", promoCode);
+                            command.Parameters.AddWithValue("@ISBN", ISBNCode);
+                            if (command.ExecuteNonQuery() == 0)
+                                throw new ArgumentException($"Не найдено книги с ISBN кодом {ISBNCode} в заказе {promoCode}");
+                        }
                     }
-                    if(IsBookExistInShop(ISBNCode))
+                    else
+                    {
+                        using (var command = connection.CreateCommand())
+                        {
+                            command.Transaction = transaction;
+                            command.CommandText = "update OrderToBook set Count = Count - @Count " +
+                                "where PromoCode=@PromoCode and ISBN=@ISBN";
+                            command.Parameters.AddWithValue("@Count", count);
+                            command.Parameters.AddWithValue("@PromoCode", promoCode);
+                            command.Parameters.AddWithValue("@ISBN", ISBNCode);
+                            if (command.ExecuteNonQuery() == 0)
+                                throw new ArgumentException($"Не найдено книги с ISBN кодом {ISBNCode} в заказе {promoCode}");
+                        }
+                    }
+                    if(!IsBookExistInShop(ISBNCode))
                         throw new ArgumentException($"Книги с ISBN кодом {ISBNCode} не существует");
                     using (var command = connection.CreateCommand())
                     {

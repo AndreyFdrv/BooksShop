@@ -13,5 +13,6 @@ namespace BooksShop.Model
             Complete
         }
         public StatusEnum Status;
+        public static int MinCost = 2000;
     }
 }
