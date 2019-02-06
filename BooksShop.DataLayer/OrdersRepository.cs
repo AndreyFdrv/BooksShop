@@ -180,7 +180,7 @@ namespace BooksShop.DataLayer
                 }
             }
         }
-        public bool IsBookExistInShop(string ISBNCode)
+        private bool IsBookExistInShop(string ISBNCode)
         {
             using (var connection = new SqlConnection(ConnectionString))
             {
